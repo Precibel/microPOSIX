@@ -1,0 +1,48 @@
+# microPOSIX Kconfig Configuration File
+
+config MICROPOSIX_PROFILE
+    int "Hardware profile (0=Minimal/20MHz, 1=Full/90MHz)"
+    default 1
+    help
+      0: Minimal profile for 20MHz MCUs (Cortex-M0+, etc.)
+      1: Full profile for 90MHz+ MCUs (Cortex-M4F, etc.)
+
+config MICROPOSIX_SCHED_PREEMPTIVE
+    bool "Enable preemptive scheduling"
+    default y if MICROPOSIX_PROFILE=1
+    default n if MICROPOSIX_PROFILE=0
+
+config MICROPOSIX_CPU_PROFILE
+    bool "Enable DWT cycle counter CPU profiling"
+    depends on MICROPOSIX_PROFILE=1
+    default y
+
+config MICROPOSIX_LEAK_DETECT
+    bool "Enable heap leak detection (development only)"
+    depends on MICROPOSIX_PROFILE=1
+    default y
+
+config MICROPOSIX_LCD_ENABLE
+    bool "Enable LCD display subsystem"
+    depends on MICROPOSIX_PROFILE=1
+    default y
+
+config MICROPOSIX_SHELL_ENABLE
+    bool "Enable UART0 interactive debug shell"
+    depends on MICROPOSIX_PROFILE=1
+    default y
+
+config MICROPOSIX_TICK_RATE_HZ
+    int "Kernel tick rate in Hz"
+    default 1000 if MICROPOSIX_PROFILE=1
+    default 100 if MICROPOSIX_PROFILE=0
+
+config MICROPOSIX_MAX_THREADS
+    int "Maximum number of concurrent threads"
+    default 32 if MICROPOSIX_PROFILE=1
+    default 8 if MICROPOSIX_PROFILE=0
+
+config MICROPOSIX_STACK_SIZE_DEFAULT
+    int "Default stack size in bytes"
+    default 1024 if MICROPOSIX_PROFILE=1
+    default 512 if MICROPOSIX_PROFILE=0
