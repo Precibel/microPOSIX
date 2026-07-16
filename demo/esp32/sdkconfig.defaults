@@ -1,0 +1,134 @@
+# microPOSIX ESP32 Demo - Default Configuration
+# This file provides default configuration for ESP-IDF
+# It will be used as a base for the project configuration
+
+# ==============================================================================
+# microPOSIX Configuration
+# ==============================================================================
+
+# Enable microPOSIX
+CONFIG_MICROPOSIX_ENABLE=y
+
+# microPOSIX Profile (0 = Minimal, 1 = Full)
+CONFIG_MICROPOSIX_PROFILE=1
+
+# microPOSIX Features
+CONFIG_MICROPOSIX_SCHED_PREEMPTIVE=y
+CONFIG_MICROPOSIX_CPU_PROFILE=y
+CONFIG_MICROPOSIX_LEAK_DETECT=y
+CONFIG_MICROPOSIX_LCD_ENABLE=n
+CONFIG_MICROPOSIX_SHELL_ENABLE=y
+
+# Thread Configuration
+CONFIG_MICROPOSIX_MAX_THREADS=32
+CONFIG_MICROPOSIX_STACK_SIZE_DEFAULT=2048
+CONFIG_MICROPOSIX_TICK_RATE_HZ=1000
+
+# ==============================================================================
+# ESP32 Hardware Configuration
+# ==============================================================================
+
+# Target selection (uncomment one)
+# CONFIG_IDF_TARGET="esp32"
+# CONFIG_IDF_TARGET="esp32s3"
+# CONFIG_IDF_TARGET="esp32c3"
+
+# CPU Frequency (MHz)
+CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ=160
+
+# ==============================================================================
+# FreeRTOS Configuration
+# ==============================================================================
+
+# FreeRTOS version
+CONFIG_FREERTOS_VERSION="10.4.3"
+
+# Task priorities
+CONFIG_FREERTOS_MAX_PRIORITIES=32
+
+# Task stack sizes
+CONFIG_FREERTOS_TASK_STACK_SIZE_DEFAULT=4096
+
+# ==============================================================================
+# UART Configuration
+# ==============================================================================
+
+# UART0 (Shell)
+CONFIG_UART0_ENABLE=y
+CONFIG_UART0_BAUD_RATE=115200
+CONFIG_UART0_TXD=1
+CONFIG_UART0_RXD=3
+
+# ==============================================================================
+# GPIO Configuration
+# ==============================================================================
+
+# Built-in LED GPIO
+CONFIG_MP_HAL_ESP32_GPIO_LED_BUILTIN=2
+
+# ==============================================================================
+# Watchdog Configuration
+# ==============================================================================
+
+# Hardware Watchdog
+CONFIG_ESP_TASK_WDT_ENABLE=y
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=5
+
+# ==============================================================================
+# Logging Configuration
+# ==============================================================================
+
+# Log level
+CONFIG_LOG_DEFAULT_LEVEL=3  # INFO
+
+# Log buffer size
+CONFIG_LOG_BUFFER_SIZE=4096
+
+# ==============================================================================
+# BLE Configuration (Optional)
+# ==============================================================================
+
+# Enable BLE
+# CONFIG_BT_ENABLE=y
+# CONFIG_BT_BLUEDROID_ENABLE=y
+
+# BLE device name
+# CONFIG_BT_DEVICE_NAME="microPOSIX-ESP32"
+
+# ==============================================================================
+# WiFi Configuration (Optional)
+# ==============================================================================
+
+# Enable WiFi
+# CONFIG_WIFI_ENABLE=y
+
+# ==============================================================================
+# Power Management Configuration
+# ==============================================================================
+
+# Enable light sleep
+# CONFIG_PM_ENABLE=y
+
+# ==============================================================================
+# Memory Configuration
+# ==============================================================================
+
+# Heap size
+CONFIG_ESP32_HEAP_SIZE=327680  # 320KB
+
+# ==============================================================================
+# Build Configuration
+# ==============================================================================
+
+# Compiler optimizations
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
+# Debug symbols
+CONFIG_COMPILER_DEBUG=y
+
+# Warnings as errors
+CONFIG_COMPILER_WARN_WERROR=y
+
+# ==============================================================================
+# End of Configuration
+# ==============================================================================
