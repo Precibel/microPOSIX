@@ -17,7 +17,8 @@ flowchart TD
      classDef sys fill:#d62728,stroke:#333,stroke-width:2px,color:#fff; 
      classDef tme fill:#9467bd,stroke:#333,stroke-width:2px,color:#fff; 
  
-     subgraph Flash [1. Flash Memory Execute-In-Place] 
+     subgraph Flash ["Flash Memory Execute In Place"]
+
          direction TB 
          Boot[Immutable Bootloader]:::sys 
          OS_Flash[microPOSIX Kernel & BLE]:::os 
@@ -31,7 +32,8 @@ flowchart TD
          OS_Flash -->|3. Validates Header| App0 
      end 
  
-     subgraph RAM [2. RAM Partitioning & Sandboxing] 
+     subgraph RAM ["2. RAM Partitioning & Sandboxing"]
+
          direction TB 
          OS_RAM[OS Private RAM\nHeap, BLE Buffers]:::os 
          MPU{Hardware MPU\nBoundary}:::sys 
@@ -41,7 +43,8 @@ flowchart TD
          MPU --- App_RAM 
      end 
  
-     subgraph Runtime [3. Execution & ABI Routing] 
+     subgraph Runtime ["3. Execution & ABI Routing"]
+
          direction LR 
          App_Thread([App Thread\nUnprivileged]):::app 
          Syscall{ABI Call\nSVC or Jump}:::sys 
@@ -52,7 +55,8 @@ flowchart TD
          OS_Kernel -->|Allocates Memory| App_RAM 
      end 
  
-     subgraph Tracking [4. Thread Management Engine - TME] 
+     subgraph Tracking ["4. Thread Management Engine - TME"]
+
          direction TB 
          TCB[Thread Control Block]:::tme 
          StackWalker[Stack Canary Walker]:::tme 
@@ -61,14 +65,9 @@ flowchart TD
  
          OS_Kernel -->|Updates Runtime Stats| TCB 
          StackWalker -.->|Scans for 0xDEADBEEF| TCB 
-         LeakTracker -.->|Logs Allocation PC| TCB 
-         TCB -->|Exposes Data| UART 
-     end 
- 
-     %% Cross-Subsystem Links 
-     App0 -.->|XIP Instruction Fetch| App_Thread 
-     App_RAM -.->|Stack Memory| TCB 
-```
+         LeakTracker -.->|Logs Allocation PC| TCB
+
+     end
 
 ---
 
