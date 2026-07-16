@@ -68,7 +68,7 @@ flowchart TD
          LeakTracker -.->|Logs Allocation PC| TCB
 
      end
-
+'''
 ---
 
 ## 🚀 Hardware Profiles
