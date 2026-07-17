@@ -76,6 +76,13 @@ CFLAGS += -DMICROPOSIX_CPU_PROFILE=1
 CFLAGS += -DMICROPOSIX_LEAK_DETECT=1
 CFLAGS += -DMICROPOSIX_SHELL_ENABLE=1
 CFLAGS += -DMICROPOSIX_BLE_ENABLE=1
+CFLAGS += -DMICROPOSIX_MEMORY_VIEW_ENABLE=1
+CFLAGS += -DMICROPOSIX_SHARED_HEAP_ENABLE=1
+CFLAGS += -DMICROPOSIX_GC_ENABLE=1
+CFLAGS += -DMICROPOSIX_JSON_ENABLE=1
+CFLAGS += -DMICROPOSIX_PROTOBUF_ENABLE=1
+CFLAGS += -DMICROPOSIX_EDF_ENABLE=1
+CFLAGS += -DMICROPOSIX_ODATA_ENABLE=1
 
 # Include paths
 INCLUDES = -Iinclude
@@ -86,6 +93,7 @@ INCLUDES += -Iinclude/microposix/debug
 INCLUDES += -Iinclude/microposix/hal
 INCLUDES += -Iinclude/microposix/ble
 INCLUDES += -Iinclude/microposix/bootloader
+INCLUDES += -Iinclude/microposix/serialization
 
 # Platform-specific includes
 ifeq ($(PLATFORM), esp32)
@@ -108,7 +116,10 @@ SRC_KERNEL = src/kernel/scheduler.c \
              src/kernel/watchdog.c
 
 SRC_MM = src/mm/tlsf.c \
-         src/mm/pool.c
+         src/mm/pool.c \
+         src/mm/memory_view.c \
+         src/mm/shared_heap.c \
+         src/mm/gc.c
 
 SRC_DEBUG = src/debug/log.c \
             src/debug/shell.c \
@@ -117,6 +128,11 @@ SRC_DEBUG = src/debug/log.c \
 SRC_BLE = src/ble/ble_mgr.c
 
 SRC_BOOT = src/bootloader/boot.c
+
+SRC_SERIALIZATION = src/serialization/json.c \
+                  src/serialization/protobuf.c \
+                  src/serialization/edf.c \
+                  src/serialization/odata.c
 
 # Platform-specific sources
 ifeq ($(PLATFORM), esp32)
@@ -143,6 +159,7 @@ OBJ_MM = $(SRC_MM:.c=.o)
 OBJ_DEBUG = $(SRC_DEBUG:.c=.o)
 OBJ_BLE = $(SRC_BLE:.c=.o)
 OBJ_BOOT = $(SRC_BOOT:.c=.o)
+OBJ_SERIALIZATION = $(SRC_SERIALIZATION:.c=.o)
 OBJ_PLATFORM = $(SRC_PLATFORM:.c=.o)
 
 # Targets
@@ -155,11 +172,11 @@ TARGET_HEX = microposix.hex
 all: $(TARGET_LIB)
 
 # Build the library
-$(TARGET_LIB): $(OBJ_KERNEL) $(OBJ_MM) $(OBJ_DEBUG) $(OBJ_BLE) $(OBJ_BOOT) $(OBJ_PLATFORM)
+$(TARGET_LIB): $(OBJ_KERNEL) $(OBJ_MM) $(OBJ_DEBUG) $(OBJ_BLE) $(OBJ_BOOT) $(OBJ_SERIALIZATION) $(OBJ_PLATFORM)
 	$(AR) rcs $@ $^
 
 # Build the ELF file (for testing)
-$(TARGET_ELF): $(OBJ_KERNEL) $(OBJ_MM) $(OBJ_DEBUG) $(OBJ_BLE) $(OBJ_BOOT) $(OBJ_PLATFORM)
+$(TARGET_ELF): $(OBJ_KERNEL) $(OBJ_MM) $(OBJ_DEBUG) $(OBJ_BLE) $(OBJ_BOOT) $(OBJ_SERIALIZATION) $(OBJ_PLATFORM)
 	$(CC) $(CFLAGS) -o $@ $^ -nostdlib -Wl,-T,platform/$(PLATFORM)/kernel.ld
 
 # Build the BIN file
@@ -176,7 +193,7 @@ $(TARGET_HEX): $(TARGET_ELF)
 
 # Clean target
 clean:
-	rm -f $(OBJ_KERNEL) $(OBJ_MM) $(OBJ_DEBUG) $(OBJ_BLE) $(OBJ_BOOT) $(OBJ_PLATFORM)
+	rm -f $(OBJ_KERNEL) $(OBJ_MM) $(OBJ_DEBUG) $(OBJ_BLE) $(OBJ_BOOT) $(OBJ_SERIALIZATION) $(OBJ_PLATFORM)
 	rm -f $(TARGET_LIB) $(TARGET_ELF) $(TARGET_BIN) $(TARGET_HEX)
 
 # ESP32-specific targets
