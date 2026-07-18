@@ -284,3 +284,8 @@ install(TARGETS microposix
 if(DEFINED ENV{IDF_PATH})
     add_subdirectory(demo/esp32)
 endif()
+
+# nRF54L15 demo application
+if(MICROPOSIX_PLATFORM STREQUAL "nrf54l15")
+    add_subdirectory(demo/nrf54l15)
+endif()
