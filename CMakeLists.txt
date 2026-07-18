@@ -6,7 +6,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 # Project configuration
-project(microPOSIX VERSION 1.0.0 LANGUAGES C)
+project(microPOSIX VERSION 1.0.0 LANGUAGES C ASM)
 
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -65,6 +65,7 @@ endif()
 
 # Compiler flags
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror -std=c11")
+set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -x assembler-with-cpp")
 
 if(MICROPOSIX_PROFILE EQUAL 1)
     # Full profile (90MHz+)
@@ -136,6 +137,8 @@ elseif(MICROPOSIX_PLATFORM STREQUAL "arm")
     list(APPEND MICROPOSIX_INCLUDE_DIRS include/microposix/hal/arm)
 elseif(MICROPOSIX_PLATFORM STREQUAL "riscv")
     list(APPEND MICROPOSIX_INCLUDE_DIRS include/microposix/hal/riscv)
+elseif(MICROPOSIX_PLATFORM STREQUAL "nrf54l15")
+    list(APPEND MICROPOSIX_INCLUDE_DIRS include/microposix/hal/nrf54l15)
 endif()
 
 # Source files
@@ -199,6 +202,9 @@ elseif(MICROPOSIX_PLATFORM STREQUAL "posix")
     set(MICROPOSIX_SRC_PLATFORM
         platform/posix/context_switch.c
     )
+elseif(MICROPOSIX_PLATFORM STREQUAL "nrf54l15")
+    # Include the nRF54L15 platform CMake file
+    include(platform/nrf54l15/CMakeLists.txt)
 endif()
 
 # Create microPOSIX library
@@ -238,6 +244,19 @@ if(MICROPOSIX_PLATFORM STREQUAL "esp32")
             -DMICROPOSIX_ARCH_RISCV=1
         )
     endif()
+elseif(MICROPOSIX_PLATFORM STREQUAL "nrf54l15")
+    # Apply core-specific flags from the platform CMake file
+    if(DEFINED CORE_C_FLAGS)
+        target_compile_options(microposix PRIVATE ${CORE_C_FLAGS})
+    endif()
+    if(DEFINED CORE_ASM_FLAGS)
+        target_compile_options(microposix PRIVATE ${CORE_ASM_FLAGS})
+    endif()
+    
+    # Add nRF54L15-specific definitions
+    target_compile_options(microposix PRIVATE
+        -DMICROPOSIX_NRF54L15=1
+    )
 endif()
 
 # Linker flags
@@ -245,6 +264,15 @@ target_link_options(microposix PRIVATE
     -ffunction-sections
     -fdata-sections
 )
+
+# Platform-specific linker script
+if(MICROPOSIX_PLATFORM STREQUAL "nrf54l15")
+    if(DEFINED CORE_LINKER_SCRIPT)
+        target_link_options(microposix PRIVATE
+            -T${CORE_LINKER_SCRIPT}
+        )
+    endif()
+endif()
 
 # Install targets
 install(TARGETS microposix
