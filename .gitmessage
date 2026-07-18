@@ -1,0 +1,124 @@
+# Memory Management and Serialization Enhancements
+
+This commit adds comprehensive memory management and serialization capabilities to microPOSIX:
+
+## Memory Management Features
+
+### Zero-Copy Memory Views
+- `mp_memory_view_t`: Efficient buffer access without copying
+- `mp_memory_slice_t`: Typed memory slices with element counts
+- `mp_memory_arena_t`: Bulk allocation with zero-copy slicing
+- Functions: slice, copy, compare, find patterns, overlap detection
+
+### Shared Heap Memory
+- Thread-safe allocation with mutex protection
+- Allocation tracking with source file and line information
+- Comprehensive statistics (used, free, peak, fragmentation)
+- Defragmentation support
+- Global shared heap instance
+
+### Garbage Collection
+- Reference counting (deterministic, O(1) overhead)
+- Mark-and-sweep (handles cycles)
+- Generational GC (optimized for embedded)
+- Finalizers for cleanup code
+- Root tracking and object pinning
+- Global GC instance with convenience macros
+
+### Memory Pools & Arenas
+- Enhanced existing pool and TLSF allocators
+- Better error handling and memory tracking
+
+## Serialization Features
+
+### JSON
+- Full JSON parser and generator
+- Support for all JSON types (null, boolean, number, string, object, array)
+- Pretty printing, custom allocators
+- File I/O support
+- Deep copy and equality comparison
+
+### Protocol Buffers
+- Varint, fixed32/64, length-delimited encoding/decoding
+- All protobuf wire types
+- Zig-zag encoding for signed integers
+- Field header encoding/decoding
+- Message encoding/decoding with descriptors
+
+### EDF (Extensible Data Format)
+- Compact binary serialization optimized for embedded systems
+- Type-safe encoding/decoding
+- Support for nested structures
+- Zero-copy reading where possible
+- Schema evolution support
+- Schema registry
+
+### OData (Open Data Protocol)
+- OData v4.0 protocol support
+- Entity model definition
+- Query option parsing ($filter, $select, $orderby, $top, $skip, $count)
+- OData JSON format support
+- Entity set operations
+- Navigation properties
+- Complex types and collections
+- Metadata document generation
+- Service document generation
+
+## Files Added
+
+### Memory Management
+- include/microposix/mm/memory_view.h
+- include/microposix/mm/shared_heap.h
+- include/microposix/mm/gc.h
+- include/microposix/mm/memory.h
+- src/mm/memory_view.c
+- src/mm/shared_heap.c
+- src/mm/gc.c
+
+### Serialization
+- include/microposix/serialization/json.h
+- include/microposix/serialization/protobuf.h
+- include/microposix/serialization/edf.h
+- include/microposix/serialization/odata.h
+- include/microposix/serialization/serialization.h
+- src/serialization/json.c
+- src/serialization/protobuf.c
+- src/serialization/edf.c
+- src/serialization/odata.c
+
+### Tests & Documentation
+- tests/test_memory.c
+- tests/test_serialization.c
+- tests/test_odata.c
+- docs/MEMORY_MANAGEMENT.md
+- IMPLEMENTATION_SUMMARY.txt
+- CHANGES_SUMMARY.md
+
+## Files Modified
+
+- Makefile: Added new source files, include paths, and feature flags
+- tests/Makefile: Added new test files
+
+## Key Characteristics
+
+- **Designed for Embedded**: Minimal overhead, predictable behavior
+- **Thread-Safe**: Optional mutex protection for shared resources
+- **Zero-Copy**: Memory views enable efficient data access
+- **Comprehensive**: Full-featured implementations with extensive APIs
+- **Well-Documented**: Complete documentation with examples
+- **Tested**: Comprehensive test suites for all features
+- **Backward Compatible**: All new features are opt-in
+
+## Configuration Flags
+
+- DMICROPOSIX_MEMORY_VIEW_ENABLE=1
+- DMICROPOSIX_SHARED_HEAP_ENABLE=1
+- DMICROPOSIX_GC_ENABLE=1
+- DMICROPOSIX_JSON_ENABLE=1
+- DMICROPOSIX_PROTOBUF_ENABLE=1
+- DMICROPOSIX_EDF_ENABLE=1
+- DMICROPOSIX_ODATA_ENABLE=1
+
+## Usage Examples
+
+See IMPLEMENTATION_SUMMARY.txt for detailed usage examples.
