@@ -4,6 +4,21 @@ microPOSIX is a **deterministic, preemptive Resident Kernel RTOS** designed for 
 
 ---
 
+## Table of Contents
+1. [System Architecture](#system-architecture)
+2. [Hardware Profiles](#hardware-profiles)
+3. [Kernel Features](#kernel-features)
+4. [Platform Support](#platform-support)
+5. [Resident OS Shell](#resident-os-shell-uart0)
+6. [Project Structure](#project-structure)
+7. [Demo Applications](#demo-applications)
+8. [Build and Verify](#build-and-verify)
+9. [Recent Changes](#recent-changes)
+10. [Documentation](#documentation)
+11. [License](#license)
+
+---
+
 ## System Architecture
 
 The microPOSIX architecture decouples the core OS from the user application, allowing the application to be updated independently via FOTA without jeopardizing the system's core stability.
@@ -89,22 +104,45 @@ flowchart TD
 
 ### Nordic nRF54L15 (Dual-Core: Cortex-M33 + RV32)
 - **Architecture**: Asymmetric Multi-Processing (AMP) with dual-core support
-- **Core 1**: Cortex-M33 with FPU, running microPOSIX instance
-- **Core 2**: RISC-V RV32IMAC, running independent microPOSIX instance
+- **Core 1**: Cortex-M33 with FPU, running independent microPOSIX instance
+- **Core 2**: RISC-V RV32IMAC (integer-only), running independent microPOSIX instance
 - **IPC**: Hardware mailbox, semaphores, and events for inter-core communication
 - **Shared Memory**: 64KB shared SRAM for synchronization primitives and thread registry
-- **Flash**: 2MB per core (M33: 0x00000000-0x001FFFFF, RV32: 0x01000000-0x011FFFFF)
-- **RAM**: 256KB per core + 64KB shared
+- **Memory Layout**: 
+  - M33: Flash 0x00000000-0x001FFFFF (2MB), SRAM 0x20000000-0x2003FFFF (256KB)
+  - RV32: Flash 0x01000000-0x011FFFFF (2MB), SRAM 0x20080000-0x200BFFFF (256KB)
+  - Shared: SRAM 0x20040000-0x2004FFFF (64KB)
 - **Features**: Cross-core mutexes, barriers, rendezvous, handshake synchronization
+- **Context Switching**: PendSV interrupt for M33, machine-mode software interrupt for RV32
 
-### Espressif ESP32 (Xtensa/RISC-V)
-- **Architecture**: Single or dual-core (ESP32: Xtensa LX6 dual-core, ESP32-S3/C3: RISC-V)
+### Espressif ESP32 Family
+
+#### ESP32 (Xtensa LX6)
+- **Architecture**: Dual-core Xtensa LX6 @ 80-240MHz
 - **Integration**: Uses **FreeRTOS** as the underlying RTOS
-- **ABI**: System Jump Table (SVC not available on Xtensa/RISC-V)
-- **Memory**: 4MB+ Flash, 520KB+ RAM (ESP32); 4MB+ Flash, 384-512KB RAM (ESP32-S3/C3)
-- **MPU/PMP**: Memory protection via Xtensa MPU or RISC-V PMP
+- **ABI**: System Jump Table (SVC not available on Xtensa)
+- **Memory**: 4MB+ Flash, 520KB+ RAM
+- **MPU**: Xtensa MPU with 8 regions
+- **Cycle Counter**: Uses `ccount` register
 - **Features**: Full thread management, synchronization primitives, GPIO, UART, WDT
-- **Compatibility**: See [ESP32 Compatibility Analysis](demo/esp32/COMPATIBILITY_ANALYSIS.md)
+
+#### ESP32-S3 (RISC-V)
+- **Architecture**: Dual-core RISC-V @ 80-160MHz
+- **Integration**: Uses **FreeRTOS** as the underlying RTOS
+- **ABI**: System Jump Table
+- **Memory**: 4MB+ Flash, 512KB+ RAM
+- **PMP**: RISC-V Physical Memory Protection with 16 regions
+- **Cycle Counter**: Uses `mcycle` CSR
+- **Features**: Full thread management, synchronization primitives, GPIO, UART, WDT
+
+#### ESP32-C3 (RISC-V)
+- **Architecture**: Single-core RISC-V @ 80-160MHz
+- **Integration**: Uses **FreeRTOS** as the underlying RTOS
+- **ABI**: System Jump Table
+- **Memory**: 4MB+ Flash, 384KB+ RAM
+- **PMP**: RISC-V Physical Memory Protection with 16 regions
+- **Cycle Counter**: Uses `mcycle` CSR
+- **Features**: Full thread management, synchronization primitives, GPIO, UART, WDT
 
 ---
 
@@ -117,10 +155,10 @@ flowchart TD
   - **TLSF Allocator**: High-performance, O(1) heap management for variable-size objects
   - **Fixed-Size Pools**: ISR-safe, zero-fragmentation allocation for timing-critical tasks
   - **Leak Tracking**: Allocation headers include Caller PC and Thread ID for precise leak identification
-  - **Zero-Copy Memory Views**: Efficient buffer access without copying
-  - **Shared Heap**: Thread-safe allocation with mutex protection
-  - **Garbage Collection**: Reference counting and mark-and-sweep GC
-  - **Memory Arenas**: Bulk allocation and zero-copy slicing
+  - **Zero-Copy Memory Views**: Efficient buffer access without copying (memory_view.h)
+  - **Shared Heap**: Thread-safe allocation with mutex protection (shared_heap.h)
+  - **Garbage Collection**: Reference counting and mark-and-sweep GC (gc.h)
+  - **Memory Arenas**: Bulk allocation and zero-copy slicing (memory_view.h)
 
 ### Thread Management Engine (TME)
 - **Stack Watermarking**: Real-time stack health monitoring via `0xAA` pattern scanning
@@ -133,26 +171,34 @@ flowchart TD
 - **Cross-Core Synchronization**: Mutexes, barriers, rendezvous, handshake (nRF54L15)
 - **Serialization Support**: JSON, Protocol Buffers, EDF encoding/decoding
 
+### Serialization Support
+The microPOSIX serialization framework provides:
+- **JSON**: Full parser and generator with support for all JSON types
+- **Protocol Buffers**: Varint, fixed32/64, length-delimited encoding with zig-zag for signed integers
+- **EDF (Extensible Data Format)**: Compact binary serialization with type safety and schema support
+
 ---
 
 ## Platform Support
 
 ### Fully Supported Platforms
 
-| Platform | Architecture | Cores | MPU/PMP | BLE | Status |
-|----------|-------------|-------|---------|-----|--------|
-| TI CC2755 | Cortex-M33 | 1 | MPU | BLE5.4 | Production |
-| TI CC2340R5 | Cortex-M0+ | 1 | MPU | BLE5.4 | Production |
-| Nordic nRF54L15 | Cortex-M33 + RV32 | 2 | MPU | BLE5.4 | Production |
-| ESP32 | Xtensa LX6 | 2 | MPU | BLE4.2 | Production |
-| ESP32-S3 | RISC-V | 2 | PMP | BLE5.0 | Production |
-| ESP32-C3 | RISC-V | 1 | PMP | BLE5.0 | Production |
+| Platform | Architecture | Cores | MPU/PMP | BLE | WiFi | Status |
+|----------|-------------|-------|---------|-----|------|--------|
+| TI CC2755 | Cortex-M33 | 1 | MPU | BLE5.4 |   | Production |
+| TI CC2340R5 | Cortex-M0+ | 1 | MPU | BLE5.4 |   | Production |
+| Nordic nRF54L15 | Cortex-M33 + RV32 | 2 | MPU | BLE5.4 |   | Production |
+| ESP32 | Xtensa LX6 | 2 | MPU | BLE4.2 |  | Production |
+| ESP32-S3 | RISC-V | 2 | PMP | BLE5.0 |  | Production |
+| ESP32-C3 | RISC-V | 1 | PMP | BLE5.0 |  | Production |
 
 ### Platform-Specific Documentation
-- [nRF54L15 Platform Support](platform/nrf54l15/README.md)
-- [ESP32 Platform Support](platform/esp32/README.md)
-- [ESP32 Demo Application](demo/esp32/README.md)
-- [nRF54L15 Demo Application](demo/nrf54l15/README.md)
+- [nRF54L15 Platform Support](platform/nrf54l15/README.md) - Dual-core architecture, IPC, synchronization
+- [ESP32 Platform Support](platform/esp32/README.md) - FreeRTOS integration, HAL implementation
+- [ESP32 Demo Application](demo/esp32/README.md) - Blinking LED demo with build instructions
+- [nRF54L15 Demo Application](demo/nrf54l15/README.md) - Dual-core demo with IPC and synchronization tests
+- [ESP32 Compatibility Analysis](demo/esp32/COMPATIBILITY_ANALYSIS.md) - Detailed compatibility assessment
+- [ESP32 Demo Summary](demo/esp32/DEMO_SUMMARY.md) - Comprehensive demo overview
 
 ---
 
@@ -177,53 +223,142 @@ The shell provides a real-time terminal on UART0 (921600 baud) for diagnostics a
 ```
 microPOSIX/
 ├── include/microposix/
-│   ├── kernel/              # Core kernel headers (thread, scheduler, IPC)
-│   ├── mm/                 # Memory management (TLSF, pools, gc, arenas)
+│   ├── kernel/              # Core kernel headers
+│   │   ├── thread.h        # Thread management
+│   │   ├── scheduler.h     # Scheduler
+│   │   ├── semaphore.h     # Semaphores
+│   │   ├── mutex.h         # Mutexes
+│   │   ├── message_queue.h # Message queues
+│   │   └── ...
+│   ├── mm/                 # Memory management
+│   │   ├── tlsf.h          # TLSF allocator
+│   │   ├── pool.h          # Fixed-size pools
+│   │   ├── memory_view.h   # Zero-copy memory views
+│   │   ├── shared_heap.h    # Shared heap management
+│   │   ├── gc.h            # Garbage collection
+│   │   └── memory.h        # Unified memory API
 │   ├── hal/                # Hardware Abstraction Layer
+│   │   ├── cpu.h           # CPU interface
 │   │   ├── arm/            # ARM Cortex-M common
-│   │   ├── nrf54l15/       # Nordic nRF54L15 (M33 + RV32)
-│   │   │   └── shared/     # Shared IPC and synchronization
-│   │   └── esp32/          # Espressif ESP32 (Xtensa/RISC-V)
+│   │   │   ├── cpu.c
+│   │   │   └── context_switch.c
+│   │   ├── nrf54l15/       # Nordic nRF54L15
+│   │   │   ├── m33/        # Cortex-M33 core
+│   │   │   │   ├── context_switch.c
+│   │   │   │   ├── cpu.c
+│   │   │   │   ├── startup.c
+│   │   │   │   ├── irq_handlers.c
+│   │   │   │   └── linker.ld
+│   │   │   ├── rv32/       # RISC-V core
+│   │   │   │   ├── context_switch.c
+│   │   │   │   ├── cpu.c
+│   │   │   │   ├── startup.c
+│   │   │   │   ├── irq_handlers.c
+│   │   │   │   └── linker.ld
+│   │   │   └── shared/     # Shared between cores
+│   │   │       ├── ipc.c
+│   │   │       ├── ipc.h
+│   │   │       ├── shared_memory.c
+│   │   │       ├── shared_memory.h
+│   │   │       └── core_sync.c
+│   │   └── esp32/          # Espressif ESP32
+│   │       ├── cpu.c
+│   │       ├── cpu.h
+│   │       ├── gpio.c
+│   │       ├── gpio.h
+│   │       ├── mpu.c
+│   │       ├── mpu.h
+│   │       ├── uart.c
+│   │       ├── uart.h
+│   │       ├── wdt.c
+│   │       └── wdt.h
 │   ├── ble/                # BLE stack interfaces
+│   │   ├── ble.h           # BLE API
+│   │   ├── ble_esp32.h     # ESP32 BLE backend
+│   │   └── ...
 │   ├── debug/              # Debug and logging
-│   └── serialization/      # JSON, Protocol Buffers, EDF
+│   │   ├── log.h           # Logging interface
+│   │   ├── shell.h         # Shell interface
+│   │   └── ...
+│   └── serialization/      # Serialization support
+│       ├── json.h          # JSON parser/generator
+│       ├── protobuf.h      # Protocol Buffers
+│       ├── edf.h           # EDF format
+│       └── serialization.h # Unified API
 ├── src/
 │   ├── kernel/             # Core scheduler, IPC, threading
+│   │   ├── scheduler.c
+│   │   ├── thread.c
+│   │   ├── semaphore.c
+│   │   ├── mutex.c
+│   │   ├── message_queue.c
+│   │   └── ...
 │   ├── mm/                 # Memory allocators and GC
+│   │   ├── tlsf.c
+│   │   ├── pool.c
+│   │   ├── memory_view.c
+│   │   ├── shared_heap.c
+│   │   └── gc.c
 │   ├── debug/              # UART Shell, Log engine, Fault handlers
+│   │   ├── shell.c
+│   │   ├── log.c
+│   │   └── fault_handlers.c
 │   ├── bootloader/         # Stage-2 loader, FOTA logic
+│   │   ├── bootloader.c
+│   │   ├── fota.c
+│   │   └── secure_update.c
 │   └── app_led_blink.c     # Example application
 ├── platform/
 │   ├── arm/                # ARM Cortex-M HAL
-│   ├── nrf54l15/           # nRF54L15 platform (M33 + RV32 cores)
-│   │   ├── m33/            # Cortex-M33 core files
-│   │   ├── rv32/           # RISC-V core files
-│   │   └── shared/        # Shared memory and IPC
-│   ├── esp32/              # ESP32 platform files
+│   │   ├── cortex-m33/
+│   │   └── cortex-m0+
+│   ├── nrf54l15/           # nRF54L15 platform
+│   │   ├── CMakeLists.txt
+│   │   ├── m33/
+│   │   ├── rv32/
+│   │   └── shared/
+│   ├── esp32/              # ESP32 platform
+│   │   ├── context_switch.c
+│   │   ├── cpu.c
+│   │   ├── gpio.c
+│   │   ├── mpu.c
+│   │   ├── uart.c
+│   │   └── wdt.c
 │   ├── riscv/              # RISC-V common
 │   └── posix/              # POSIX simulation backend
 ├── demo/
-│   ├── esp32/              # ESP32 demo with blinking LED
-│   │   ├── main.c          # Main application
-│   │   ├── app_blink.c     # Blinking LED task
-│   │   └── README.md       # ESP32 demo documentation
-│   └── nrf54l15/           # nRF54L15 dual-core demo
-│       ├── main.c          # Main application
-│       ├── ipc_test.c      # IPC test functions
-│       ├── thread_test.c   # Thread test functions
-│       ├── sync_test.c     # Synchronization test functions
-│       └── README.md       # nRF54L15 demo documentation
+│   ├── esp32/              # ESP32 demo
+│   │   ├── CMakeLists.txt
+│   │   ├── main.c
+│   │   ├── app_blink.c
+│   │   ├── README.md
+│   │   ├── COMPATIBILITY_ANALYSIS.md
+│   │   ├── DEMO_SUMMARY.md
+│   │   └── sdkconfig.defaults
+│   └── nrf54l15/           # nRF54L15 demo
+│       ├── CMakeLists.txt
+│       ├── main.c
+│       ├── ipc_test.c
+│       ├── thread_test.c
+│       ├── sync_test.c
+│       └── README.md
 ├── tests/                  # Test suite
+│   ├── test_memory.c
+│   ├── test_serialization.c
+│   └── ...
 ├── toolchains/             # CMake toolchain files
-│   ├── nrf54l15-arm.cmake  # Arm Cortex-M33 toolchain
-│   └── nrf54l15-riscv.cmake # RISC-V toolchain
+│   ├── nrf54l15-arm.cmake
+│   └── nrf54l15-riscv.cmake
 ├── docs/                   # Documentation
-│   ├── MEMORY_MANAGEMENT.md # Memory management documentation
+│   ├── MEMORY_MANAGEMENT.md
 │   └── ...
 ├── CHANGES_SUMMARY.md      # Summary of recent changes
+├── IMPLEMENTATION_SUMMARY.txt
 ├── microPOSIX_Final_Architecture_Document.md
+├── USER_MANUAL_CC2340.md
 ├── README.md               # This file
-└── Makefile                # Build system
+├── Makefile                # Build system
+└── CMakeLists.txt           # CMake build configuration
 ```
 
 ---
@@ -231,7 +366,9 @@ microPOSIX/
 ## Demo Applications
 
 ### ESP32 Demo
-The ESP32 demo demonstrates:
+The ESP32 demo demonstrates microPOSIX running on ESP32 with FreeRTOS integration.
+
+**Features:**
 - microPOSIX kernel initialization on ESP32
 - Thread creation and management
 - GPIO control using microPOSIX HAL
@@ -240,21 +377,36 @@ The ESP32 demo demonstrates:
 
 **Quick Start:**
 ```bash
+# Prerequisites: Install ESP-IDF v5.0+
 cd demo/esp32
+
+# Configure the project
 idf.py set-target esp32
+idf.py menuconfig
+
+# Build and flash
 idf.py build
-idf.py -p /dev/ttyUSB0 flash monitor
+idf.py -p /dev/ttyUSB0 flash
+
+# Monitor output
+idf.py -p /dev/ttyUSB0 monitor
 ```
+
+**Supported Targets:**
+- `esp32` - Standard ESP32 (Xtensa)
+- `esp32s3` - ESP32-S3 (RISC-V)
+- `esp32c3` - ESP32-C3 (RISC-V)
 
 **Documentation:** [ESP32 Demo README](demo/esp32/README.md)
 
 ### nRF54L15 Demo
-The nRF54L15 demo demonstrates:
-- Dual-core (Cortex-M33 + RV32) functionality
-- Inter-Core Communication (IPC)
+The nRF54L15 demo demonstrates dual-core functionality with IPC, threading, and synchronization.
+
+**Features:**
+- Inter-Core Communication (IPC) between Cortex-M33 and RISC-V cores
 - Thread management on both cores
 - Synchronization primitives (mutexes, spinlocks, barriers, rendezvous)
-- Shared memory access
+- Shared memory access for global state
 
 **Quick Start:**
 ```bash
@@ -276,6 +428,10 @@ cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/nrf54l15-riscv.cmake \
 make
 ```
 
+**Output Files:**
+- `nrf54l15_m33_demo.elf` - M33 executable
+- `nrf54l15_rv32_demo.elf` - RV32 executable
+
 **Documentation:** [nRF54L15 Demo README](demo/nrf54l15/README.md)
 
 ---
@@ -287,6 +443,7 @@ make
 #### Common Tools
 - `arm-none-eabi-gcc` v12.x+ (for ARM Cortex-M)
 - `riscv32-none-elf-gcc` (for RISC-V)
+- `xtensa-esp32-elf-gcc` (for ESP32 Xtensa)
 - `make`
 - `cmake` (version 3.5+)
 
@@ -346,48 +503,138 @@ cd tests && make
 
 ### New Features Added
 
-1. **nRF54L15 Dual-Core Support**
-   - Full support for Nordic nRF54L15 SoC with Cortex-M33 and RISC-V cores
-   - Asymmetric Multi-Processing (AMP) architecture
-   - Inter-Core Communication (IPC) layer with mailbox, semaphores, and events
-   - Shared memory for thread registry and synchronization primitives
-   - Cross-core mutexes, barriers, rendezvous, and handshake synchronization
-   - Core-specific context switching (PendSV for M33, software interrupt for RV32)
+#### 1. nRF54L15 Dual-Core Support
+- **Full support** for Nordic nRF54L15 SoC with Cortex-M33 and RISC-V cores
+- **Asymmetric Multi-Processing (AMP)** architecture
+- **Inter-Core Communication (IPC)** layer:
+  - Hardware mailbox for message passing
+  - 4 hardware semaphores for synchronization
+  - Event flags for signaling between cores
+- **Shared memory** (64KB) for:
+  - Thread registry (global visibility across cores)
+  - Synchronization primitives (spinlocks, mutexes)
+  - Core synchronization (barriers, rendezvous, handshake)
+- **Core-specific context switching**:
+  - PendSV interrupt for Cortex-M33
+  - Machine-mode software interrupt for RISC-V
+- **Boot process**: M33 boots first, initializes shared memory, starts RV32 core
 
-2. **ESP32 Platform Support**
-   - Full support for ESP32, ESP32-S3, and ESP32-C3
-   - Integration with FreeRTOS as the underlying RTOS
-   - Platform-specific HAL for Xtensa and RISC-V architectures
-   - GPIO, UART, WDT, and MPU/PMP drivers
-   - Compatibility analysis and workarounds for architecture differences
+**Files Added:**
+- `platform/nrf54l15/` - Complete platform support
+- `platform/nrf54l15/m33/` - Cortex-M33 core files
+- `platform/nrf54l15/rv32/` - RISC-V core files
+- `platform/nrf54l15/shared/` - Shared IPC and synchronization
+- `include/microposix/hal/nrf54l15/shared/` - HAL headers
+- `toolchains/nrf54l15-arm.cmake` - Arm toolchain
+- `toolchains/nrf54l15-riscv.cmake` - RISC-V toolchain
+- `demo/nrf54l15/` - Demo application with tests
 
-3. **Advanced Memory Management**
-   - Zero-copy memory views and slices
-   - Shared heap with thread-safe allocation
-   - Garbage collection (reference counting and mark-and-sweep)
-   - Memory arenas for bulk allocation
-   - Comprehensive memory statistics and tracking
+#### 2. ESP32 Platform Support
+- **Full support** for ESP32, ESP32-S3, and ESP32-C3
+- **FreeRTOS integration** as the underlying RTOS
+- **Architecture support**:
+  - Xtensa LX6 (ESP32)
+  - RISC-V (ESP32-S3, ESP32-C3)
+- **Platform-specific HAL**:
+  - CPU initialization and cycle counting
+  - MPU (Xtensa) and PMP (RISC-V) memory protection
+  - GPIO, UART, WDT drivers
+- **Compatibility solutions**:
+  - System Jump Table instead of SVC
+  - `ccount` (Xtensa) or `mcycle` (RISC-V) instead of DWT
+  - Proper privilege level handling
 
-4. **Serialization Support**
-   - JSON parsing and generation
-   - Protocol Buffers encoding and decoding
-   - EDF (Extensible Data Format) serialization
+**Files Added:**
+- `platform/esp32/` - Complete platform support
+- `include/microposix/hal/esp32/` - HAL headers
+- `include/microposix/kernel/abi_esp32.h` - ESP32 ABI
+- `include/microposix/ble/ble_esp32.h` - ESP32 BLE backend
+- `demo/esp32/` - Demo application with blinking LED
+- `demo/esp32/COMPATIBILITY_ANALYSIS.md` - Detailed compatibility analysis
+- `demo/esp32/DEMO_SUMMARY.md` - Demo summary
+
+#### 3. Advanced Memory Management
+- **Zero-Copy Memory Views** (`memory_view.h`):
+  - Memory views for efficient buffer access
+  - Memory slices for typed access
+  - Memory arenas for bulk allocation
+  - Overlap detection and safe copying
+  - Pattern finding and comparison
+- **Shared Heap** (`shared_heap.h`):
+  - Thread-safe allocation with mutex protection
+  - Allocation tracking with source file and line information
+  - Comprehensive statistics (used, free, peak, fragmentation)
+  - Defragmentation support
+  - Per-thread caching (optional)
+- **Garbage Collection** (`gc.h`):
+  - Reference counting (deterministic, O(1) overhead)
+  - Mark-and-sweep (handles cycles)
+  - Generational GC (optimized for embedded)
+  - Finalizers for cleanup code
+  - Root tracking and object pinning
+
+**Files Added:**
+- `include/microposix/mm/memory_view.h`
+- `include/microposix/mm/shared_heap.h`
+- `include/microposix/mm/gc.h`
+- `include/microposix/mm/memory.h`
+- `src/mm/memory_view.c`
+- `src/mm/shared_heap.c`
+- `src/mm/gc.c`
+
+#### 4. Serialization Support
+- **JSON** (`json.h`, `json.c`):
+  - Full JSON parser and generator
+  - Support for all JSON types
+  - Pretty printing, custom allocators
+- **Protocol Buffers** (`protobuf.h`, `protobuf.c`):
+  - Varint, fixed32/64, length-delimited encoding
+  - All protobuf wire types
+  - Zig-zag encoding for signed integers
+- **EDF (Extensible Data Format)** (`edf.h`, `edf.c`):
+  - Compact binary serialization
+  - Type-safe encoding/decoding
+  - Schema support
+
+**Files Added:**
+- `include/microposix/serialization/json.h`
+- `include/microposix/serialization/protobuf.h`
+- `include/microposix/serialization/edf.h`
+- `include/microposix/serialization/serialization.h`
+- `src/serialization/json.c`
+- `src/serialization/protobuf.c`
+- `src/serialization/edf.c`
 
 For more details, see:
-- [CHANGES_SUMMARY.md](CHANGES_SUMMARY.md)
-- [IMPLEMENTATION_SUMMARY.txt](IMPLEMENTATION_SUMMARY.txt)
-- [ESP32 Compatibility Analysis](demo/esp32/COMPATIBILITY_ANALYSIS.md)
-- [ESP32 Demo Summary](demo/esp32/DEMO_SUMMARY.md)
+- [CHANGES_SUMMARY.md](CHANGES_SUMMARY.md) - Comprehensive change summary
+- [IMPLEMENTATION_SUMMARY.txt](IMPLEMENTATION_SUMMARY.txt) - Implementation details
+- [ESP32 Compatibility Analysis](demo/esp32/COMPATIBILITY_ANALYSIS.md) - ESP32 compatibility assessment
+- [ESP32 Demo Summary](demo/esp32/DEMO_SUMMARY.md) - ESP32 demo overview
+- [REVIEW_SUMMARY.md](REVIEW_SUMMARY.md) - Code review summary
 
 ---
 
 ## Documentation
 
+### Architecture and Design
 - [microPOSIX Final Architecture Document](microPOSIX_Final_Architecture_Document.md)
 - [Memory Management Documentation](docs/MEMORY_MANAGEMENT.md)
-- [User Manual for CC2340](USER_MANUAL_CC2340.md)
+
+### Platform-Specific
 - [nRF54L15 Platform Support](platform/nrf54l15/README.md)
 - [ESP32 Platform Support](platform/esp32/README.md)
+
+### User Manuals
+- [User Manual for CC2340](USER_MANUAL_CC2340.md)
+
+### Demo Applications
+- [ESP32 Demo README](demo/esp32/README.md)
+- [nRF54L15 Demo README](demo/nrf54l15/README.md)
+
+### Reviews and Analysis
+- [REVIEW_SUMMARY.md](REVIEW_SUMMARY.md) - Comprehensive code review
+- [ESP32 Compatibility Analysis](demo/esp32/COMPATIBILITY_ANALYSIS.md)
+- [ESP32 Demo Summary](demo/esp32/DEMO_SUMMARY.md)
 
 ---
 
@@ -397,4 +644,4 @@ This project is licensed under the terms specified in the project files.
 
 ---
 
-*microPOSIX v2.0 | Developed by Precibel | Updated with nRF54L15 and ESP32 Support*
+*microPOSIX v2.0 | Developed by Precibel | Updated with nRF54L15, ESP32, Advanced Memory Management, and Serialization Support*
