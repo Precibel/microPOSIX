@@ -185,12 +185,12 @@ The microPOSIX serialization framework provides:
 
 | Platform | Architecture | Cores | MPU/PMP | BLE | WiFi | Status |
 |----------|-------------|-------|---------|-----|------|--------|
-| TI CC2755 | Cortex-M33 | 1 | MPU | BLE5.4 |   | Production |
-| TI CC2340R5 | Cortex-M0+ | 1 | MPU | BLE5.4 |   | Production |
-| Nordic nRF54L15 | Cortex-M33 + RV32 | 2 | MPU | BLE5.4 |   | Production |
-| ESP32 | Xtensa LX6 | 2 | MPU | BLE4.2 |  | Production |
-| ESP32-S3 | RISC-V | 2 | PMP | BLE5.0 |  | Production |
-| ESP32-C3 | RISC-V | 1 | PMP | BLE5.0 |  | Production |
+| TI CC2755 | Cortex-M33 | 1 | MPU | BLE5.4 | No | Production |
+| TI CC2340R5 | Cortex-M0+ | 1 | MPU | BLE5.4 | No | Production |
+| Nordic nRF54L15 | Cortex-M33 + RV32 | 2 | MPU | BLE5.4 | No | Production |
+| ESP32 | Xtensa LX6 | 2 | MPU | BLE4.2 | Yes | Production |
+| ESP32-S3 | RISC-V | 2 | PMP | BLE5.0 | Yes | Production |
+| ESP32-C3 | RISC-V | 1 | PMP | BLE5.0 | Yes | Production |
 
 ### Platform-Specific Documentation
 - [nRF54L15 Platform Support](platform/nrf54l15/README.md) - Dual-core architecture, IPC, synchronization
